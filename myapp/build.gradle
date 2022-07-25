@@ -1,0 +1,82 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'io.github.fvarrui:javapackager:1.6.6'
+        classpath("de.jjohannes.gradle:extra-java-module-info:0.15")
+    }
+}
+plugins {
+	id 'application'
+    id 'java'
+    id 'eclipse'
+}
+apply plugin: 'io.github.fvarrui.javapackager.plugin'
+apply plugin: 'de.jjohannes.extra-java-module-info'
+
+// force gradle to add dependencies to the modulepath instead of the classpath in eclipse
+plugins.withType(JavaPlugin).configureEach {
+    java {
+        modularity.inferModulePath = true
+    }
+}
+
+// Application properties
+version = '1.0'
+group = 'com.myapp'
+applicationName = 'emoji-webgrabber-tool'
+description = 'Tool to extract emojis as images from the Web'
+mainClassName = 'com.myapp.EmojiWebExtractorTool'
+compileJava.options.encoding = 'UTF-8'
+
+project.repositories {
+    mavenCentral()
+}
+project.sourceSets {
+    main {
+        java.srcDir('src/main/java')
+        resources.srcDir('src/main/resources')
+    }
+}
+project.dependencies {
+	implementation         group: 'org.apache.commons',             name: 'commons-lang3',          version: '3.9'
+	implementation         group: 'org.jsoup',                      name: 'jsoup',                  version: '1.15.2'
+	implementation         group: 'com.vdurmont',                   name: 'emoji-java',             version: '5.1.1'
+	implementation 	       group: 'org.json',                       name: 'json',                   version: '20170516'
+}
+
+// Workaround: Modify JARs with no "Automatic-Module-Name" in their MANIFEST to register them as regular modules
+extraJavaModuleInfo {
+    automaticModule('emoji-java-5.1.1.jar', 'emojijava')
+    automaticModule('json-20170516.jar', 'json')
+}
+// Workaround for gradle version > 7.0
+processResources() {
+    duplicatesStrategy = 'INCLUDE'
+}
+processTestResources() {
+    duplicatesStrategy = 'INCLUDE'
+}
+application {
+	mainModule = 'com.myapp'
+	mainClass = 'com.myapp.EmojiWebExtractorTool'
+}
+jar {
+    manifest {
+        attributes 'Main-Class': 'com.myapp.EmojiWebExtractorTool'
+    }
+    duplicatesStrategy = 'EXCLUDE'
+}
+task packageMyApp(type: io.github.fvarrui.javapackager.gradle.PackageTask, dependsOn: build) {
+    displayName = 'Emoji Web Extractor'
+    mainClass = 'com.myapp.EmojiWebExtractorTool'
+    bundleJre = true
+    generateInstaller = true
+    administratorRequired = false
+    additionalModules = [ 'emojijava', 'org.json' ]
+    additionalModulePaths = [file('build/myapp/libs')]
+    jreMinVersion = 18
+    jdkPath = file('D:/Java/openjdk-18.0.1.1_windows-x64_bin/jdk-18.0.1.1')
+    platform = 'windows'
+}
